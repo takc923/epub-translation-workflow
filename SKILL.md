@@ -17,7 +17,7 @@ Collect and confirm these inputs before execution:
 - `input_epub`: source EPUB path
 - `output_epub`: translated EPUB path
 - `target_language`: language code or language label (default: `ja`)
-- `scope`: `core` or `all`
+- `scope`: `core` or `all` (default: `core`)
 - `keep_failure_backup`: `true` or `false` (default: `true`)
 
 ## Approval Minimization
