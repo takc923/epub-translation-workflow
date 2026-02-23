@@ -1,0 +1,4 @@
+interface:
+  display_name: "EPUB Translation Workflow"
+  short_description: "Structure-safe EPUB translation workflow with diff checks"
+  default_prompt: "Use $epub-translation-workflow to translate an EPUB with structure-safe edits and validation diff checks."
