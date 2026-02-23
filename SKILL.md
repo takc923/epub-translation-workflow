@@ -82,6 +82,12 @@ Hard constraints:
 - Preserve pagebreak anchors like `id="page_..."`.
 - Preserve cross-references and link targets.
 
+Style and terminology constraints:
+
+- Translation style must be natural and accurate in the target language.
+- Technical terms must include the original source text at first occurrence only (for example: `<translated term> (<source term>)`).
+- Build glossary early, then keep updating it during chapter translation.
+
 ## Worker Execution Strategy
 
 Use this strategy to reduce delays and avoid rework:

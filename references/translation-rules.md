@@ -21,6 +21,9 @@ Translate EPUB content into a target language while keeping package structure an
 - Default target language is configurable (`target_language`, default `ja`).
 - Keep proper nouns, standards, and citations in source language unless user requests otherwise.
 - Keep bibliographic entries in `references.xhtml` unchanged unless explicitly requested.
+- Translation quality target is natural and accurate prose.
+- For technical terms, include the original source text at first occurrence only (for example: `<translated term> (<source term>)`).
+- Glossary operation timing is `create first, then update continuously`: create glossary v0 before full body translation, then update at least at each chapter completion.
 - For terminology, use project glossary and normalize wording chapter-by-chapter.
 
 ## Scope Policy
