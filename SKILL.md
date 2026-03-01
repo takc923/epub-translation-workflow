@@ -39,10 +39,12 @@ Use this flow:
 3. Define translation targets according to scope.
 4. Translate with structure-safe edits only.
 5. Run per-chunk quality gates.
-6. Rebuild EPUB with atomic replacement.
-7. Compare `epubcheck` results between original and generated EPUB.
-8. Fix generated-only errors and rerun validation until diff is clean.
-9. Cleanup run directory according to success/failure policy.
+6. Define allowed target files in `todo.md` when translating only specific chapters/files.
+7. Rebuild EPUB with atomic replacement.
+8. Compare `epubcheck` results between original and generated EPUB.
+9. Run allowed-change gate and ensure only intended files changed.
+10. Fix generated-only errors and rerun validation until diff is clean.
+11. Cleanup run directory according to success/failure policy.
 
 ## Progress Tracking
 
@@ -70,6 +72,12 @@ Use `core` scope by default:
 - Keep `index.xhtml` unchanged unless user explicitly asks to translate index entries.
 
 Use `all` scope only when user explicitly requests full translation.
+
+When user requests chapter-only translation without extending scope:
+
+- Keep `scope` as `core` or `all` (no new scope type).
+- Declare exact allowed target files (example: `OEBPS/xhtml/ch01.xhtml`) in `todo.md`.
+- Enforce allowed-change gate before final acceptance.
 
 ## Translation Rules
 
@@ -120,7 +128,11 @@ After each translated chunk, run all gates:
 2. Anchor gate:
 - verify critical anchors (`page_*`, section ids referenced by nav/index/toc)
 3. Residual English gate:
-- prioritize detection of lines with no target-language characters (not total English count)
+- classify hits into `allowed` and `suspicious`
+- fail when `suspicious_count > 0`
+4. Allowed-change gate:
+- compare translated EPUB against original EPUB
+- fail when files outside allowed target list are changed
 
 Important: Missing pagebreak IDs often creates `RSC-012` errors.
 
@@ -142,6 +154,7 @@ Validation policy:
 Never replace output directly.
 
 - Build to `*.tmp` first.
+- Run contamination check before packaging (`*.tmp`, `*.ids`, `*.pageids`, `*.bak_codex` must be absent from unpacked source).
 - Replace output atomically (`mv`) only after successful build.
 - Keep rollback copy only inside `tmp/run-<timestamp>/rollback/`.
 - Remove rollback on success.
@@ -159,27 +172,39 @@ Use these scripts from `scripts/`:
 2. `scripts/repackage_epub.sh`
 - Rebuilds EPUB from `run-dir/unpacked`.
 - Forces `mimetype` first and stored.
-- Excludes `*.bak_codex` by default.
+- Excludes temporary artifacts (`*.tmp`, `*.ids`, `*.pageids`, `*.bak_codex`) by default.
+- Stops immediately if contamination artifacts are found in unpacked source.
 - Uses atomic replacement and run-local rollback.
 
 3. `scripts/cleanup_run.sh`
 - Success: removes run directory.
 - Failure: keeps one rollback generation only if requested.
 
+4. `scripts/residual_english_gate.sh`
+- Classifies English hits into `allowed` and `suspicious`.
+- Supports optional extra allow patterns file.
+- Fails when suspicious residual English exists.
+
+5. `scripts/check_allowed_changes.sh`
+- Compares XHTML files in original/translated EPUB.
+- Fails when changed files include entries outside `--allowed-file`.
+
 ## Recommended Git Workflow
 
 When Git is available:
 
-1. Commit skill files independently from EPUB outputs.
-2. Keep script changes and SKILL/reference changes in the same commit.
-3. Use separate commits for workflow policy updates and tool behavior updates.
+1. Check repository availability first: `git rev-parse --is-inside-work-tree`.
+2. If Git is available, commit skill files independently from EPUB outputs.
+3. Keep script changes and SKILL/reference changes in the same commit.
+4. Use separate commits for workflow policy updates and tool behavior updates.
 
 ## Acceptance Checklist
 
 Accept only when all items pass:
 
-- `SKILL.md` includes workflow, worker strategy, interruption recovery, quality gates, validation diff policy, and safe replace policy.
-- `scripts/check_epub.sh`, `scripts/repackage_epub.sh`, and `scripts/cleanup_run.sh` exist and run.
+- `SKILL.md` includes workflow, worker strategy, interruption recovery, quality gates, validation diff policy, allowed-change gate, and safe replace policy.
+- `scripts/check_epub.sh`, `scripts/repackage_epub.sh`, `scripts/cleanup_run.sh`, `scripts/residual_english_gate.sh`, and `scripts/check_allowed_changes.sh` exist and run.
 - `quick_validate.py` passes.
 - On sample run, generated-only epubcheck errors are extracted correctly.
+- On sample run, allowed-change gate blocks unintended file modifications.
 - Success path leaves no scattered `*.bak-*` in workspace root.

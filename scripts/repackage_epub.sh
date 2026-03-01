@@ -13,6 +13,7 @@ USAGE
 RUN_DIR=""
 OUTPUT=""
 FAILURE_BACKUP="on"
+TMP_OUTPUT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,6 +42,23 @@ if [[ "$FAILURE_BACKUP" != "on" && "$FAILURE_BACKUP" != "off" ]]; then
   exit 2
 fi
 
+resolve_abs_path() {
+  python3 - "$1" <<'PY'
+import os
+import sys
+
+print(os.path.abspath(sys.argv[1]))
+PY
+}
+
+cleanup_tmp() {
+  if [[ -n "${TMP_OUTPUT:-}" && -f "$TMP_OUTPUT" ]]; then
+    rm -f "$TMP_OUTPUT"
+  fi
+}
+
+RUN_DIR="$(resolve_abs_path "$RUN_DIR")"
+OUTPUT="$(resolve_abs_path "$OUTPUT")"
 SOURCE_DIR="$RUN_DIR/unpacked"
 if [[ ! -d "$SOURCE_DIR" ]]; then
   echo "Unpacked source directory not found: $SOURCE_DIR" >&2
@@ -53,6 +71,8 @@ if [[ ! -f "$SOURCE_DIR/mimetype" ]]; then
 fi
 
 mkdir -p "$(dirname "$OUTPUT")"
+BUILD_DIR="$RUN_DIR/build"
+mkdir -p "$BUILD_DIR"
 ROLLBACK_DIR="$RUN_DIR/rollback"
 
 if [[ -f "$OUTPUT" && "$FAILURE_BACKUP" == "on" ]]; then
@@ -61,16 +81,37 @@ if [[ -f "$OUTPUT" && "$FAILURE_BACKUP" == "on" ]]; then
   cp "$OUTPUT" "$ROLLBACK_DIR/$(basename "$OUTPUT").bak-$TS"
 fi
 
-TMP_OUTPUT="$OUTPUT.tmp"
-rm -f "$TMP_OUTPUT"
+mapfile -t CONTAMINATED_FILES < <(
+  find "$SOURCE_DIR" -type f \( \
+    -name "*.tmp" -o \
+    -name "*.ids" -o \
+    -name "*.pageids" -o \
+    -name "*.bak_codex" \
+  \) | sort
+)
+if [[ "${#CONTAMINATED_FILES[@]}" -gt 0 ]]; then
+  echo "Contamination detected in unpacked source. Remove these files before packaging:" >&2
+  printf '  %s\n' "${CONTAMINATED_FILES[@]}" >&2
+  exit 1
+fi
+
+TMP_OUTPUT="$BUILD_DIR/$(basename "$OUTPUT").tmp"
+cleanup_tmp
+trap cleanup_tmp EXIT
 
 (
   cd "$SOURCE_DIR"
   zip -X0 "$TMP_OUTPUT" mimetype
-  zip -Xr9 "$TMP_OUTPUT" * -x mimetype -x "*.bak_codex"
+  zip -Xr9 "$TMP_OUTPUT" * \
+    -x mimetype \
+    -x "*.bak_codex" \
+    -x "*.tmp" \
+    -x "*.ids" \
+    -x "*.pageids"
 )
 
 mv "$TMP_OUTPUT" "$OUTPUT"
+trap - EXIT
 
 # Verify packaging rule: first entry must be uncompressed mimetype
 python3 - "$OUTPUT" <<'PY'

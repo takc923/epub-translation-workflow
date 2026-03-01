@@ -33,6 +33,8 @@ Translate EPUB content into a target language while keeping package structure an
 - Translate all: `ch*.xhtml`, `fm.xhtml`, `toc.xhtml`, `nav.xhtml`, `pref01-04.xhtml`, `appendix.xhtml`.
 - Translate descriptive text only in `references.xhtml`.
 - Keep `index.xhtml` unchanged unless user requests index translation.
+- Do not add new scope values for chapter-only requests. Keep scope unchanged and define exact allowed target files operationally.
+- For chapter-only requests, record allowed target files in `todo.md` and verify with allowed-change gate before final acceptance.
 
 ## Chunking Guidance
 
@@ -44,4 +46,33 @@ Translate EPUB content into a target language while keeping package structure an
 
 - `xmllint --noout <file>`
 - verify anchor IDs referenced by nav/toc/index
-- run residual English detection gate
+- run residual English detection gate with `allowed/suspicious` classification
+- run allowed-change gate before final acceptance
+
+## Residual English Gate Policy
+
+Classify every English-bearing line into one of two categories:
+
+- `allowed`: permitted English that does not block completion
+- `suspicious`: possible untranslated content that blocks completion
+
+Pass criteria:
+
+- `suspicious_count = 0`
+
+Default `allowed` categories:
+
+- URL/domain/email entries
+- bibliographic lines (book titles, author names, publisher strings, edition labels)
+- approved acronyms and standards terms (`IIBA`, `PMI`, `IREB`, `BABOK`, `EPUB`, `XML`)
+- first-occurrence source-term parentheses (`<translated term> (English)` or `<translated term> （English）`)
+
+Default `suspicious` category:
+
+- any other English-bearing line in translatable narrative content
+
+Extra allow patterns:
+
+- Optional file input can provide additional regex rules.
+- Pattern file format: one regex per line; blank lines and lines starting with `#` are ignored.
+- Keep this list minimal to avoid masking untranslated text.
