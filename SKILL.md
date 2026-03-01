@@ -85,7 +85,8 @@ Hard constraints:
 Style and terminology constraints:
 
 - Translation style must be natural and accurate in the target language.
-- Technical terms must include the original source text at first occurrence only (for example: `<translated term> (<source term>)`).
+- Quoted text is also part of the translation target and must be translated unless the user explicitly requests source-only quotes.
+- Technical terms must be translated. At first occurrence only, include the original source text (for example: `<translated term> (<source term>)`).
 - Build glossary early, then keep updating it during chapter translation.
 
 ## Worker Execution Strategy
